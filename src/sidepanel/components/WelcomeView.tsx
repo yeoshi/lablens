@@ -39,7 +39,7 @@ export function WelcomeView({ onAnalyze, onUpload, onDrop, onDragOver }: Welcome
         </button>
       </div>
 
-      <div className="mt-8 w-full max-w-xs rounded-md border border-teal-200 bg-[#F0FDFA] p-4">
+      <div className="mt-8 w-full max-w-xs rounded-[14px] border border-brand-border bg-brand-bg p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-muted">
           Works with
         </p>

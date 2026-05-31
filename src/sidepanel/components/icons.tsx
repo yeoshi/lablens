@@ -16,11 +16,11 @@ export function LabLensLogo({ className = 'h-7 w-7' }: IconProps) {
 
 export function DocumentSearchIcon({ className = 'h-12 w-12' }: IconProps) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <rect x="8" y="6" width="24" height="32" rx="3" stroke="#0D9488" strokeWidth="2" />
-      <path d="M14 16h12M14 22h12M14 28h8" stroke="#0D9488" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="34" cy="34" r="8" stroke="#0D9488" strokeWidth="2" />
-      <path d="M39 39l4 4" stroke="#0D9488" strokeWidth="2" strokeLinecap="round" />
+    <svg className={`${className} text-brand-primary`} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <rect x="8" y="6" width="24" height="32" rx="3" stroke="currentColor" strokeWidth="2" />
+      <path d="M14 16h12M14 22h12M14 28h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="34" cy="34" r="8" stroke="currentColor" strokeWidth="2" />
+      <path d="M39 39l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -170,10 +170,10 @@ export function EmailIcon({ className = 'h-4 w-4' }: IconProps) {
 
 export function ClipboardIcon({ className = 'h-8 w-8' }: IconProps) {
   return (
-    <svg className={className} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <rect x="8" y="6" width="16" height="20" rx="2" stroke="#0D9488" strokeWidth="1.5" />
-      <path d="M12 6V5a2 2 0 012-2h4a2 2 0 012 2v1" stroke="#0D9488" strokeWidth="1.5" />
-      <path d="M12 14h8M12 18h8M12 22h5" stroke="#0D9488" strokeWidth="1.5" strokeLinecap="round" />
+    <svg className={`${className} text-brand-primary`} viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="8" y="6" width="16" height="20" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 6V5a2 2 0 012-2h4a2 2 0 012 2v1" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 14h8M12 18h8M12 22h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -193,6 +193,32 @@ export function MessageIcon({ className = 'h-4 w-4' }: IconProps) {
       <path d="M2.5 4.5h11v6h-3.5L6 13v-2.5H2.5v-6z" stroke="currentColor" strokeWidth="1.25" strokeLinejoin="round" />
     </svg>
   );
+}
+
+export function ShieldCheckIcon({ className = 'h-8 w-8' }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <path
+        d="M16 4l10 4v7c0 6.5-4.5 11.5-10 13C10.5 26.5 6 21.5 6 15V8l10-4z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M11 16l3 3 7-7"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function HeroUrgencyIcon({ urgency, className = 'h-8 w-8' }: { urgency: string; className?: string }) {
+  if (urgency === 'action_needed') return <ShieldAlertIcon className={className} />;
+  if (urgency === 'worth_monitoring') return <InfoCircleIcon className={className} />;
+  return <ShieldCheckIcon className={className} />;
 }
 
 export function UrgencyIcon({ urgency, className = 'h-5 w-5' }: { urgency: string; className?: string }) {

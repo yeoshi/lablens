@@ -22,7 +22,7 @@ function StatusBadges({
 }) {
   if (flaggedCount === 0 && borderlineCount === 0) {
     return (
-      <span className="rounded-full bg-status-normal-bg px-2 py-0.5 text-xs font-medium text-emerald-800">
+      <span className="rounded-full bg-status-normal-bg px-2 py-0.5 text-xs font-medium text-green-800">
         All normal
       </span>
     );

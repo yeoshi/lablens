@@ -20,7 +20,7 @@ export function ActionBar({ onExport, onSave, saveStatus = 'idle' }: ActionBarPr
         disabled={duplicate}
         className={`flex-1 rounded-lg border text-sm font-semibold transition-all duration-150 ${
           saved || duplicate
-            ? 'h-10 border-status-normal bg-status-normal-bg text-emerald-800'
+            ? 'h-10 border-status-normal bg-status-normal-bg text-green-800'
             : 'btn-secondary'
         }`}
       >
