@@ -1,62 +1,115 @@
 import type { AnalysisResult } from '../utils/types';
-import { LabValueCard } from './LabValueCard';
+import { UrgencyBanner } from './UrgencyBanner';
+import { OverviewSummary } from './OverviewSummary';
+import { SectionLabel } from './SectionLabel';
+import { BodySystemGroupCard } from './BodySystemGroupCard';
 import { QuestionCard } from './QuestionCard';
 import { Disclaimer } from './Disclaimer';
 import { ActionBar } from './ActionBar';
+import { countFlaggedValues, getFirstFlaggedGroupIndex } from '../utils/normalize-analysis';
 
 interface SummaryViewProps {
   result: AnalysisResult;
   onExport: () => void;
   onSave: () => void;
-  saved?: boolean;
+  saveStatus?: 'idle' | 'saved' | 'duplicate';
 }
 
-export function SummaryView({ result, onExport, onSave, saved }: SummaryViewProps) {
-  const flaggedCount = result.values.filter((v) => v.status !== 'normal').length;
+const STAGGER_MS = 50;
+
+function AnimatedSection({
+  delay,
+  children,
+  className = '',
+}: {
+  delay: number;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`opacity-0 ${className}`}
+      style={{ animation: `fade-in-up 300ms ease ${delay}ms forwards` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function SummaryView({ result, onExport, onSave, saveStatus = 'idle' }: SummaryViewProps) {
+  const { abnormalCount, borderlineCount } = countFlaggedValues(result);
+  const firstFlaggedIndex = getFirstFlaggedGroupIndex(result.groups);
+
+  let delay = 0;
+  const nextDelay = () => {
+    const current = delay;
+    delay += STAGGER_MS;
+    return current;
+  };
 
   return (
     <>
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
-        <section className="mb-6">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-text-secondary">
-            📊 Your Results Summary
-          </h2>
-          <div className="rounded-xl border border-border bg-bg-card p-4">
-            <p className="text-sm leading-relaxed text-text-primary">{result.summary}</p>
-            {flaggedCount > 0 && (
-              <p className="mt-2 text-xs font-medium text-status-abnormal">
-                {flaggedCount} value{flaggedCount !== 1 ? 's' : ''} flagged for discussion
-              </p>
-            )}
-          </div>
-        </section>
+        <div className="summary-view flex w-full flex-col gap-6">
+          <AnimatedSection delay={nextDelay()}>
+            <UrgencyBanner
+              urgency={result.urgency}
+              abnormalCount={abnormalCount}
+              borderlineCount={borderlineCount}
+            />
+          </AnimatedSection>
 
-        <section className="mb-6">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-text-secondary">
-            Lab Values
-          </h2>
-          <div className="space-y-3">
-            {result.values.map((value) => (
-              <LabValueCard key={value.name} value={value} />
-            ))}
-          </div>
-        </section>
+          <AnimatedSection delay={nextDelay()}>
+            <OverviewSummary summary={result.summary} />
+          </AnimatedSection>
 
-        <section className="mb-6">
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-text-secondary">
-            Questions for Your Doctor
-          </h2>
-          <div className="space-y-3">
-            {result.questions.map((q, i) => (
-              <QuestionCard key={i} question={q} index={i} />
-            ))}
-          </div>
-        </section>
+          <AnimatedSection delay={nextDelay()} className="w-full">
+            <SectionLabel>Your Body Systems</SectionLabel>
+            <div className="lab-values-grid">
+              {result.groups.map((group, index) => (
+                <BodySystemGroupCard
+                  key={group.system}
+                  group={group}
+                  id={index === firstFlaggedIndex ? 'first-flagged-value' : undefined}
+                  animationDelay={delay + index * STAGGER_MS}
+                />
+              ))}
+            </div>
+          </AnimatedSection>
 
-        <Disclaimer />
+          <AnimatedSection
+            delay={delay + result.groups.length * STAGGER_MS}
+            className="w-full"
+          >
+            <SectionLabel>Questions for Your Doctor</SectionLabel>
+            <div className="questions-list flex w-full flex-col gap-3">
+              {result.questions.map((q, i) => (
+                <div
+                  key={i}
+                  className="opacity-0"
+                  style={{
+                    animation: `fade-in-up 300ms ease ${delay + result.groups.length * STAGGER_MS + (i + 1) * STAGGER_MS}ms forwards`,
+                  }}
+                >
+                  <QuestionCard question={q} index={i} />
+                </div>
+              ))}
+            </div>
+          </AnimatedSection>
+
+          <AnimatedSection
+            delay={
+              delay +
+              result.groups.length * STAGGER_MS +
+              (result.questions.length + 1) * STAGGER_MS
+            }
+          >
+            <Disclaimer />
+          </AnimatedSection>
+        </div>
       </div>
 
-      <ActionBar onExport={onExport} onSave={onSave} saved={saved} />
+      <ActionBar onExport={onExport} onSave={onSave} saveStatus={saveStatus} />
     </>
   );
 }

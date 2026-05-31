@@ -1,3 +1,5 @@
+import { AlertTriangleIcon } from './icons';
+
 interface ErrorViewProps {
   message: string;
   onRetry: () => void;
@@ -12,13 +14,13 @@ export function ErrorView({ message, onRetry, onUpload }: ErrorViewProps) {
 
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-10 text-center">
-      <div className="mb-4 text-4xl">⚠️</div>
-      <h2 className="mb-2 text-lg font-bold text-text-primary">Couldn&apos;t read this PDF</h2>
-      <p className="mb-6 text-sm text-text-secondary">{message}</p>
+      <AlertTriangleIcon className="mb-4" />
+      <h2 className="mb-2 text-lg font-semibold text-text-primary">Couldn&apos;t read this PDF</h2>
+      <p className="body-text mb-6 max-w-xs">{message}</p>
 
-      <div className="mb-8 w-full max-w-xs rounded-xl bg-bg-panel p-4 text-left text-sm text-text-secondary">
-        <p className="mb-2 font-medium text-text-primary">This might happen if:</p>
-        <ul className="space-y-1">
+      <div className="card mb-8 w-full max-w-xs text-left">
+        <p className="mb-2 text-sm font-semibold text-text-primary">This might happen if:</p>
+        <ul className="body-text space-y-1 text-sm">
           <li>• The PDF is opened as a local file (use Upload PDF instead)</li>
           <li>• The PDF is image-only (no selectable text)</li>
           <li>• The page isn&apos;t a lab report</li>
@@ -27,21 +29,14 @@ export function ErrorView({ message, onRetry, onUpload }: ErrorViewProps) {
       </div>
 
       {isLocalFile ? (
-        <button
-          onClick={onUpload}
-          className="mb-3 w-full max-w-xs rounded-xl bg-accent-blue px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-        >
-          📁 Upload PDF Instead
+        <button onClick={onUpload} className="btn-primary-lg mb-3 max-w-xs">
+          Upload PDF Instead
         </button>
       ) : null}
 
       <button
         onClick={onRetry}
-        className={`w-full max-w-xs rounded-xl px-6 py-3 text-sm font-semibold transition ${
-          isLocalFile
-            ? 'border border-border bg-bg-card text-text-primary hover:bg-bg-panel'
-            : 'bg-accent-blue text-white hover:bg-blue-700'
-        }`}
+        className={isLocalFile ? 'btn-secondary-lg max-w-xs' : 'btn-primary-lg max-w-xs'}
       >
         Try Again
       </button>

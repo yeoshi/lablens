@@ -1,27 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-primary: #fafbfc;
+  --bg-primary: #f8fafb;
   --bg-card: #ffffff;
-  --bg-panel: #f4f6f8;
-  --text-primary: #1a2332;
-  --text-secondary: #5f6b7a;
-  --accent-blue: #2563eb;
+  --bg-section: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --brand-primary: #0d9488;
+  --brand-primary-light: #ccfbf1;
+  --brand-secondary: #2563eb;
   --status-normal: #10b981;
-  --status-borderline: #f59e0b;
-  --status-abnormal: #ef4444;
   --status-normal-bg: #ecfdf5;
+  --status-borderline: #f59e0b;
   --status-borderline-bg: #fffbeb;
+  --status-abnormal: #ef4444;
   --status-abnormal-bg: #fef2f2;
-  --border: #e5e7eb;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --border: #e2e8f0;
 }
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -29,15 +42,63 @@ body {
   font-family: 'DM Sans', system-ui, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  width: 400px;
+  width: 100%;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
 #root {
+  width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+@layer components {
+  .card {
+    @apply rounded-md border border-border bg-bg-card p-4 shadow-sm transition-all duration-150 ease-in-out hover:shadow-hover;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-10 items-center justify-center rounded-lg bg-brand-primary px-4 text-sm font-semibold text-white transition-all duration-150 hover:bg-teal-700;
+  }
+
+  .btn-primary-lg {
+    @apply inline-flex h-11 w-full items-center justify-center rounded-lg bg-brand-primary px-4 text-sm font-semibold text-white transition-all duration-150 hover:bg-teal-700;
+  }
+
+  .btn-secondary {
+    @apply inline-flex h-10 items-center justify-center rounded-lg border border-brand-primary bg-bg-card px-4 text-sm font-semibold text-brand-primary transition-all duration-150 hover:bg-brand-primary-light;
+  }
+
+  .btn-secondary-lg {
+    @apply inline-flex h-11 w-full items-center justify-center rounded-lg border border-brand-primary bg-bg-card px-4 text-sm font-semibold text-brand-primary transition-all duration-150 hover:bg-brand-primary-light;
+  }
+
+  .btn-ghost {
+    @apply inline-flex h-10 items-center justify-center px-2 text-sm font-semibold text-brand-primary transition-all duration-150 hover:underline;
+  }
+
+  .body-text {
+    @apply text-sm font-normal leading-relaxed text-text-secondary;
+  }
+
+  .card-title {
+    @apply text-[15px] font-semibold text-text-primary;
+  }
 }
 
 @keyframes pulse-bar {
@@ -54,17 +115,40 @@ body {
   animation: pulse-bar 1.5s ease-in-out infinite;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-  100% {
-    background-position: 200% 0;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+.animate-fade-in-up {
+  animation: fade-in-up 300ms ease forwards;
+}
+
+.lab-values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.urgency-banner,
+.overview-summary,
+.questions-list,
+.disclaimer {
+  width: 100%;
+}
+
+.summary-view {
+  width: 100%;
+}
+
+.strong-keyword {
+  font-weight: 600;
+  color: var(--text-primary);
 }

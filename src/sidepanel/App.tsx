@@ -9,7 +9,9 @@ import { useAnalysis } from './hooks/useAnalysis';
 import { useHistory } from './hooks/useHistory';
 import { useExportPDF } from './hooks/useExportPDF';
 import { useFileUpload } from './hooks/useFileUpload';
+import { usePanelWidth } from './hooks/usePanelWidth';
 import type { HistoryEntry } from './utils/types';
+import { getAnalysisFromEntry } from './utils/history-utils';
 
 function App() {
   const {
@@ -19,21 +21,23 @@ function App() {
     processing,
     analyze,
     analyzeFile,
+    reset,
     showResults,
     showHistory,
     showWelcome,
   } = useAnalysis();
-  const { history, saveAnalysis, clearHistory, formatDate } = useHistory();
+  const { history, saveAnalysis, clearHistory, deleteEntry } = useHistory();
   const { exportPDF } = useExportPDF();
+  const { containerRef } = usePanelWidth();
   const { inputRef, openFilePicker, handleFileChange, handleDrop, handleDragOver } =
     useFileUpload(analyzeFile);
-  const [saved, setSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'duplicate'>('idle');
 
   const handleSave = () => {
     if (result) {
-      saveAnalysis(result);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      const outcome = saveAnalysis(result);
+      setSaveStatus(outcome.status);
+      setTimeout(() => setSaveStatus('idle'), 2000);
     }
   };
 
@@ -42,16 +46,36 @@ function App() {
   };
 
   const handleHistoryExport = (entry: HistoryEntry) => {
-    exportPDF(entry.result);
+    exportPDF(getAnalysisFromEntry(entry));
   };
 
   const handleHistoryView = (entry: HistoryEntry) => {
-    showResults(entry.result);
+    showResults(getAnalysisFromEntry(entry));
   };
+
+  const handleHistoryBack = () => {
+    if (result) {
+      showResults(result);
+    } else {
+      showWelcome();
+    }
+  };
+
+  const headerView =
+    view === 'results'
+      ? 'results'
+      : view === 'history'
+        ? 'history'
+        : view === 'loading'
+          ? 'loading'
+          : view === 'error'
+            ? 'error'
+            : 'welcome';
 
   return (
     <div
-      className="flex min-h-screen flex-col bg-bg-primary"
+      ref={containerRef}
+      className="flex min-h-screen w-full flex-col bg-bg-primary transition-all duration-300 ease-in-out"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
@@ -63,10 +87,10 @@ function App() {
         onChange={handleFileChange}
       />
       <Header
+        view={headerView}
         onHistoryClick={showHistory}
-        showBack={view === 'history'}
-        onBackClick={result ? () => showResults(result) : showWelcome}
-        title={view === 'history' ? 'Your History' : undefined}
+        onNewAnalysis={reset}
+        onBackClick={handleHistoryBack}
       />
 
       {view === 'welcome' && (
@@ -86,7 +110,7 @@ function App() {
           result={result}
           onExport={handleExport}
           onSave={handleSave}
-          saved={saved}
+          saveStatus={saveStatus}
         />
       )}
       {view === 'history' && (
@@ -94,8 +118,8 @@ function App() {
           history={history}
           onView={handleHistoryView}
           onExport={handleHistoryExport}
+          onDelete={deleteEntry}
           onClear={clearHistory}
-          formatDate={formatDate}
         />
       )}
     </div>
