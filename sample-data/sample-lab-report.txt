@@ -1,0 +1,30 @@
+COMPLETE BLOOD COUNT (CBC) REPORT
+Patient: [REDACTED]
+Date: 31 May 2026
+Lab: Singapore General Hospital
+
+Test                  Result    Unit        Reference Range    Status
+───────────────────────────────────────────────────────────────────────
+Hemoglobin            14.2      g/dL        13.0 – 17.0        Normal
+White Blood Cell      11.8      x10^9/L     4.0 – 10.0         HIGH
+Red Blood Cell        4.85      x10^12/L    4.50 – 5.50        Normal
+Platelet Count        245       x10^9/L     150 – 400          Normal
+Hematocrit            42.1      %           38.0 – 50.0        Normal
+MCV                   86.8      fL          80.0 – 100.0       Normal
+MCH                   29.3      pg          27.0 – 33.0        Normal
+MCHC                  33.7      g/dL        32.0 – 36.0        Normal
+
+LIVER FUNCTION TEST
+ALT (SGPT)            78        U/L         7 – 56             HIGH
+AST (SGOT)            45        U/L         10 – 40            HIGH
+ALP                   82        U/L         44 – 147           Normal
+Total Bilirubin       0.9       mg/dL       0.1 – 1.2          Normal
+Albumin               4.2       g/dL        3.5 – 5.0          Normal
+
+LIPID PANEL
+Total Cholesterol     218       mg/dL       < 200              HIGH
+HDL Cholesterol       38        mg/dL       > 40               LOW
+LDL Cholesterol       148       mg/dL       < 100              HIGH
+Triglycerides         160       mg/dL       < 150              HIGH
+
+Notes: Patient fasting. Recommend follow-up in 4 weeks.
