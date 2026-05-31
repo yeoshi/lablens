@@ -21,7 +21,7 @@ function Logo() {
 export function Header({ view, onHistoryClick, onNewAnalysis, onBackClick }: HeaderProps) {
   if (view === 'history') {
     return (
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-bg-card px-4 py-3">
+      <header className="sticky top-0 z-10 flex items-center justify-between bg-bg-card px-4 py-3 shadow-header">
         <button onClick={onBackClick} className="btn-ghost h-auto px-0">
           ← Back
         </button>
@@ -34,7 +34,7 @@ export function Header({ view, onHistoryClick, onNewAnalysis, onBackClick }: Hea
   const showNewAnalysis = view === 'results';
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-bg-card px-4 py-3">
+    <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-bg-card px-4 py-3 shadow-header">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {showNewAnalysis && (
           <button onClick={onNewAnalysis} className="btn-ghost h-auto shrink-0 px-0">
