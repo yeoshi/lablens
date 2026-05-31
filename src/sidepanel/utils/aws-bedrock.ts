@@ -2,32 +2,56 @@ import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from '@aws-sdk/client-bedrock-runtime';
-import type { AnalysisResult, LabValueStatus } from './types';
-import { sortLabValues } from './helpers';
+import type { AnalysisResult } from './types';
+import { normalizeAnalysisResult } from './normalize-analysis';
 
 const SYSTEM_PROMPT = `You are LabLens, a medical lab report translator. Your job is to take raw lab result text and convert it into plain English that a non-medical person can understand.
 
 Rules:
 - NEVER diagnose or give medical advice
 - NEVER say "you should" or "you need to" — instead say "you may want to ask your doctor about..."
-- Explain each lab value in 1–2 simple sentences
-- Flag values outside the reference range as ABNORMAL (red) or BORDERLINE (amber)
-- Use analogies when helpful (e.g. "Think of HDL cholesterol as the cleanup crew in your blood vessels")
-- End every explanation with what the value measures and why it matters in everyday terms
-- Generate 3–5 specific questions the patient should ask their doctor, based on the flagged values
-- Always include the disclaimer: "This is not medical advice. Please consult your healthcare provider."
+- Group results by body system, NOT individual tests — users care about "is my liver OK?" not "what is ALT?"
+- For each body system group, write a topline (1–2 sentences) in warm, reassuring plain English — this is the HERO text. Bold-worthy words: body system names, status words like elevated/low/normal
+- Use analogies for abnormal/borderline groups when helpful
+- Flag values outside reference range as abnormal or borderline
+- Generate 3–5 specific doctor questions based on flagged values
+- Always include the disclaimer
+
+Group tests into these systems (only include systems present in the report):
+- Liver Health (🫁): ALT, AST, ALP, Bilirubin, Albumin
+- Blood Count (🩸): Hemoglobin, WBC, RBC, Platelet, Hematocrit, MCV, MCH, MCHC
+- Cholesterol & Heart (💛): Total Cholesterol, HDL, LDL, Triglycerides
+- Kidney Function (🦴): Creatinine, BUN, eGFR
+- Blood Sugar (🍬): Glucose, HbA1c
+
+Set urgency:
+- "action_needed" if ANY value is abnormal
+- "worth_monitoring" if only borderline values (no abnormal)
+- "all_clear" if all values normal
+
+Set each group's status using worst value in group: abnormal > borderline > normal
 
 Respond in this exact JSON format only, no markdown:
 {
   "summary": "A 2–3 sentence overview of the report",
-  "values": [
+  "urgency": "action_needed" | "worth_monitoring" | "all_clear",
+  "groups": [
     {
-      "name": "Test name",
-      "originalValue": "value + unit as shown in report",
-      "referenceRange": "range as shown in report",
-      "status": "normal" | "borderline" | "abnormal",
-      "explanation": "Plain English explanation (1–2 sentences)",
-      "analogy": "Optional simple analogy if it helps"
+      "system": "Liver Health",
+      "icon": "🫁",
+      "status": "abnormal" | "borderline" | "normal",
+      "topline": "Your liver enzymes are higher than normal. This could be caused by medication, alcohol, or fatty liver. Worth discussing with your doctor.",
+      "analogy": "Think of liver enzymes like a check engine light — they don't tell you exactly what's wrong, but they say something's worth checking.",
+      "values": [
+        {
+          "name": "ALT",
+          "fullName": "Alanine Aminotransferase",
+          "value": "78",
+          "unit": "U/L",
+          "referenceRange": "7–56",
+          "status": "abnormal"
+        }
+      ]
     }
   ],
   "questions": [
@@ -55,90 +79,156 @@ function getAwsConfig() {
 function parseJsonFromResponse(text: string): AnalysisResult {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid AI response format');
-  const parsed = JSON.parse(jsonMatch[0]) as AnalysisResult;
-
-  parsed.values = sortLabValues(
-    (parsed.values || []).map((v) => ({
-      ...v,
-      status: (v.status || 'normal') as LabValueStatus,
-    }))
-  );
-
-  parsed.disclaimer =
-    parsed.disclaimer ||
-    'This is not medical advice. Please consult your healthcare provider for interpretation of your results.';
-
-  return parsed;
+  const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  return normalizeAnalysisResult(parsed);
 }
 
 export function getDemoAnalysisResult(): AnalysisResult {
-  return {
+  return normalizeAnalysisResult({
     summary:
-      'Your complete blood count and metabolic panel show mostly normal results, with a few values worth discussing with your doctor — particularly your liver enzymes and cholesterol levels.',
-    values: sortLabValues([
+      'Your complete blood count looks mostly **normal**, with a few areas worth discussing — particularly your **liver** enzymes and **cholesterol** levels.',
+    urgency: 'action_needed',
+    groups: [
       {
-        name: 'ALT (Alanine Aminotransferase)',
-        originalValue: '78 U/L',
-        referenceRange: '7 – 56 U/L',
+        system: 'Liver Health',
+        icon: '🫁',
         status: 'abnormal',
-        explanation:
-          'This enzyme lives in your liver. When the level is higher than normal, it can mean your liver is working harder than usual — often due to medications, alcohol, or fatty liver.',
-        analogy: 'Think of it like a "check engine" light for your liver.',
+        topline:
+          'Your liver enzymes are higher than normal. This could be caused by medication, alcohol, or fatty liver. Worth discussing with your doctor.',
+        analogy:
+          "Think of liver enzymes like a check engine light — they don't tell you exactly what's wrong, but they say something's worth checking.",
+        values: [
+          {
+            name: 'ALT',
+            fullName: 'Alanine Aminotransferase',
+            value: '78',
+            unit: 'U/L',
+            referenceRange: '7–56',
+            status: 'abnormal',
+          },
+          {
+            name: 'AST',
+            fullName: 'Aspartate Aminotransferase',
+            value: '45',
+            unit: 'U/L',
+            referenceRange: '10–40',
+            status: 'abnormal',
+          },
+          {
+            name: 'ALP',
+            fullName: 'Alkaline Phosphatase',
+            value: '82',
+            unit: 'U/L',
+            referenceRange: '44–147',
+            status: 'normal',
+          },
+          {
+            name: 'Bili',
+            fullName: 'Total Bilirubin',
+            value: '0.9',
+            unit: 'mg/dL',
+            referenceRange: '0.1–1.2',
+            status: 'normal',
+          },
+          {
+            name: 'Alb',
+            fullName: 'Albumin',
+            value: '4.2',
+            unit: 'g/dL',
+            referenceRange: '3.5–5.0',
+            status: 'normal',
+          },
+        ],
       },
       {
-        name: 'AST (Aspartate Aminotransferase)',
-        originalValue: '45 U/L',
-        referenceRange: '10 – 40 U/L',
+        system: 'Cholesterol & Heart',
+        icon: '💛',
         status: 'abnormal',
-        explanation:
-          'AST is another liver enzyme. Elevated levels alongside ALT may suggest your liver needs attention, though mild elevations can also come from exercise.',
+        topline:
+          'Your cholesterol levels are elevated, with HDL slightly low. This is common and often improves with lifestyle changes — but worth a conversation with your doctor.',
+        analogy:
+          'Think of HDL as the cleanup crew in your blood vessels — lower levels mean less protection for your heart.',
+        values: [
+          {
+            name: 'Total Chol',
+            fullName: 'Total Cholesterol',
+            value: '218',
+            unit: 'mg/dL',
+            referenceRange: '< 200',
+            status: 'abnormal',
+          },
+          {
+            name: 'HDL',
+            fullName: 'HDL Cholesterol',
+            value: '38',
+            unit: 'mg/dL',
+            referenceRange: '> 40',
+            status: 'borderline',
+          },
+          {
+            name: 'LDL',
+            fullName: 'LDL Cholesterol',
+            value: '148',
+            unit: 'mg/dL',
+            referenceRange: '< 100',
+            status: 'abnormal',
+          },
+          {
+            name: 'Trig',
+            fullName: 'Triglycerides',
+            value: '160',
+            unit: 'mg/dL',
+            referenceRange: '< 150',
+            status: 'abnormal',
+          },
+        ],
       },
       {
-        name: 'White Blood Cell Count',
-        originalValue: '11.8 x10⁹/L',
-        referenceRange: '4.0 – 10.0 x10⁹/L',
+        system: 'Blood Count',
+        icon: '🩸',
         status: 'borderline',
-        explanation:
-          'White blood cells fight infections. A slightly elevated count may indicate your body is responding to an infection, inflammation, or stress.',
+        topline:
+          'Your blood count is mostly normal, with white blood cells slightly elevated. This can happen with mild infection or stress and is often temporary.',
+        values: [
+          {
+            name: 'Hgb',
+            fullName: 'Hemoglobin',
+            value: '14.2',
+            unit: 'g/dL',
+            referenceRange: '13.0–17.0',
+            status: 'normal',
+          },
+          {
+            name: 'WBC',
+            fullName: 'White Blood Cell',
+            value: '11.8',
+            unit: 'x10⁹/L',
+            referenceRange: '4.0–10.0',
+            status: 'borderline',
+          },
+          {
+            name: 'RBC',
+            fullName: 'Red Blood Cell',
+            value: '4.85',
+            unit: 'x10¹²/L',
+            referenceRange: '4.50–5.50',
+            status: 'normal',
+          },
+          {
+            name: 'Plt',
+            fullName: 'Platelet Count',
+            value: '245',
+            unit: 'x10⁹/L',
+            referenceRange: '150–400',
+            status: 'normal',
+          },
+        ],
       },
-      {
-        name: 'HDL Cholesterol',
-        originalValue: '38 mg/dL',
-        referenceRange: '> 40 mg/dL',
-        status: 'borderline',
-        explanation:
-          'HDL is the "good cholesterol" that helps remove bad cholesterol from your arteries. Lower levels mean less protection for your heart.',
-        analogy: 'Think of HDL as the cleanup crew in your blood vessels.',
-      },
-      {
-        name: 'Total Cholesterol',
-        originalValue: '218 mg/dL',
-        referenceRange: '< 200 mg/dL',
-        status: 'abnormal',
-        explanation:
-          'Total cholesterol measures all cholesterol in your blood. Levels above 200 may increase long-term heart disease risk.',
-      },
-      {
-        name: 'Hemoglobin',
-        originalValue: '14.2 g/dL',
-        referenceRange: '13.0 – 17.0 g/dL',
-        status: 'normal',
-        explanation:
-          'Hemoglobin carries oxygen in your red blood cells. Your level is within the healthy range, which supports good energy and oxygen delivery.',
-      },
-      {
-        name: 'Platelet Count',
-        originalValue: '245 x10⁹/L',
-        referenceRange: '150 – 400 x10⁹/L',
-        status: 'normal',
-        explanation:
-          'Platelets help your blood clot when you get a cut. Your count is normal, which is a good sign for healthy healing.',
-      },
-    ]),
+    ],
     questions: [
       {
         question:
-          'My ALT and AST levels are above normal — could this be related to any medication I am currently taking?',
+          'My liver enzymes are above normal — could this be related to any medication I am currently taking?',
         context:
           'Certain medications like statins, pain relievers, and some antibiotics can temporarily raise liver enzymes.',
       },
@@ -160,7 +250,7 @@ export function getDemoAnalysisResult(): AnalysisResult {
     ],
     disclaimer:
       'This is not medical advice. Please consult your healthcare provider for interpretation of your results.',
-  };
+  });
 }
 
 export async function analyzeWithBedrock(extractedText: string): Promise<AnalysisResult> {
@@ -176,8 +266,7 @@ export async function analyzeWithBedrock(extractedText: string): Promise<Analysi
   }
 
   const client = new BedrockRuntimeClient(config);
-  const modelId =
-    'anthropic.claude-3-5-sonnet-20240620-v1:0';
+  const modelId = 'anthropic.claude-3-5-sonnet-20240620-v1:0';
 
   const body = JSON.stringify({
     anthropic_version: 'bedrock-2023-05-31',

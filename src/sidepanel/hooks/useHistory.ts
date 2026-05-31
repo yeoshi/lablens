@@ -1,8 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { HistoryEntry, AnalysisResult } from '../utils/types';
-import { generateId, getReportTitle, formatDate } from '../utils/helpers';
+import {
+  buildHistoryEntry,
+  formatDateTime,
+  migrateHistoryEntry,
+  analysisContentHash,
+} from '../utils/history-utils';
 
 const STORAGE_KEY = 'lablens_history';
+
+export type SaveAnalysisResult = { status: 'saved' | 'duplicate'; entry: HistoryEntry };
+
+function loadEntries(raw: unknown): HistoryEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => {
+      try {
+        return migrateHistoryEntry(entry as Partial<HistoryEntry> & { result?: AnalysisResult });
+      } catch {
+        return null;
+      }
+    })
+    .filter((e): e is HistoryEntry => e !== null);
+}
 
 export function useHistory() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -10,7 +30,7 @@ export function useHistory() {
 
   useEffect(() => {
     chrome.storage.local.get(STORAGE_KEY, (data) => {
-      setHistory((data[STORAGE_KEY] as HistoryEntry[]) || []);
+      setHistory(loadEntries(data[STORAGE_KEY]));
       setLoaded(true);
     });
   }, []);
@@ -21,17 +41,19 @@ export function useHistory() {
   }, []);
 
   const saveAnalysis = useCallback(
-    (result: AnalysisResult): HistoryEntry => {
-      const flaggedCount = result.values.filter((v) => v.status !== 'normal').length;
-      const entry: HistoryEntry = {
-        id: generateId(),
-        title: getReportTitle(result),
-        analyzedAt: result.analyzedAt || new Date().toISOString(),
-        flaggedCount,
-        result,
-      };
+    (result: AnalysisResult): SaveAnalysisResult => {
+      const hash = analysisContentHash(result);
+      const duplicate = history.find(
+        (e) => analysisContentHash(e.analysisData) === hash
+      );
+
+      if (duplicate) {
+        return { status: 'duplicate', entry: duplicate };
+      }
+
+      const entry = buildHistoryEntry(result);
       persist([entry, ...history].slice(0, 50));
-      return entry;
+      return { status: 'saved', entry };
     },
     [history, persist]
   );
@@ -47,5 +69,5 @@ export function useHistory() {
     [history, persist]
   );
 
-  return { history, loaded, saveAnalysis, clearHistory, deleteEntry, formatDate };
+  return { history, loaded, saveAnalysis, clearHistory, deleteEntry, formatDateTime };
 }

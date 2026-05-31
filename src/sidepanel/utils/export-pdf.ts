@@ -2,9 +2,9 @@ import { jsPDF } from 'jspdf';
 import type { AnalysisResult } from './types';
 
 const STATUS_LABEL: Record<string, string> = {
-  abnormal: 'ABNORMAL',
-  borderline: 'BORDERLINE',
-  normal: 'NORMAL',
+  abnormal: 'NEEDS ATTENTION',
+  borderline: 'WORTH MONITORING',
+  normal: 'LOOKING GOOD',
 };
 
 export function generateExportPdf(result: AnalysisResult): jsPDF {
@@ -37,21 +37,29 @@ export function generateExportPdf(result: AnalysisResult): jsPDF {
   };
 
   addText('LabLens Summary', 20, 'bold');
-  addText(`Generated: ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })}`, 10);
+  addText(
+    `Generated: ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+    10
+  );
   addDivider();
 
   addText('OVERVIEW', 13, 'bold');
   addText(result.summary);
   addDivider();
 
-  const flagged = result.values.filter((v) => v.status !== 'normal');
-  if (flagged.length > 0) {
-    addText('FLAGGED VALUES', 13, 'bold');
-    for (const v of flagged) {
-      const status = STATUS_LABEL[v.status] || v.status.toUpperCase();
-      addText(`${status}: ${v.name} — ${v.originalValue} (normal: ${v.referenceRange})`, 11, 'bold');
-      addText(v.explanation, 10);
-      if (v.analogy) addText(`"${v.analogy}"`, 10);
+  const flaggedGroups = result.groups.filter((g) => g.status !== 'normal');
+
+  if (flaggedGroups.length > 0) {
+    addText('BODY SYSTEMS TO DISCUSS', 13, 'bold');
+    for (const group of flaggedGroups) {
+      const status = STATUS_LABEL[group.status] || group.status.toUpperCase();
+      addText(`${group.icon} ${group.system} — ${status}`, 11, 'bold');
+      addText(group.topline, 10);
+      if (group.analogy) addText(`💡 ${group.analogy}`, 9);
+      for (const v of group.values.filter((val) => val.status !== 'normal')) {
+        const display = v.unit ? `${v.value} ${v.unit}` : v.value;
+        addText(`  • ${v.name}: ${display} (ref ${v.referenceRange})`, 10);
+      }
       y += 2;
     }
     addDivider();

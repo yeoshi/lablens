@@ -1,6 +1,7 @@
 import type { AnalysisResult, MessageType, ProcessingState } from '../sidepanel/utils/types';
 import { analyzeWithBedrock } from '../sidepanel/utils/aws-bedrock';
 import { looksLikeLabReport } from '../sidepanel/utils/helpers';
+import { extractSourceFilename } from '../sidepanel/utils/history-utils';
 import { extractTextWithTextract } from './textract';
 
 function sendProgress(state: ProcessingState) {
@@ -51,6 +52,7 @@ async function runAnalysis(
     ...result,
     sourceUrl: url,
     sourceTitle: title,
+    sourceFilename: extractSourceFilename(url, title),
     analyzedAt: new Date().toISOString(),
   };
 }

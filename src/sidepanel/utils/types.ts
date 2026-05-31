@@ -1,12 +1,23 @@
 export type LabValueStatus = 'normal' | 'borderline' | 'abnormal';
 
-export interface LabValue {
+export type AnalysisUrgency = 'action_needed' | 'worth_monitoring' | 'all_clear';
+
+export interface GroupLabValue {
   name: string;
-  originalValue: string;
+  fullName?: string;
+  value: string;
+  unit: string;
   referenceRange: string;
   status: LabValueStatus;
-  explanation: string;
+}
+
+export interface BodySystemGroup {
+  system: string;
+  icon: string;
+  status: LabValueStatus;
+  topline: string;
   analogy?: string;
+  values: GroupLabValue[];
 }
 
 export interface DoctorQuestion {
@@ -16,20 +27,38 @@ export interface DoctorQuestion {
 
 export interface AnalysisResult {
   summary: string;
-  values: LabValue[];
+  urgency: AnalysisUrgency;
+  groups: BodySystemGroup[];
   questions: DoctorQuestion[];
   disclaimer: string;
   sourceUrl?: string;
   sourceTitle?: string;
+  sourceFilename?: string;
   analyzedAt?: string;
+}
+
+/** @deprecated Legacy flat value — used only when normalizing old API responses */
+export interface LegacyLabValue {
+  name: string;
+  originalValue: string;
+  referenceRange: string;
+  status: LabValueStatus;
+  explanation?: string;
+  analogy?: string;
 }
 
 export interface HistoryEntry {
   id: string;
   title: string;
-  analyzedAt: string;
+  date: string;
+  sourceUrl?: string;
+  sourceDomain?: string;
+  sourceFilename?: string;
+  urgency: AnalysisUrgency;
   flaggedCount: number;
-  result: AnalysisResult;
+  borderlineCount: number;
+  normalCount: number;
+  analysisData: AnalysisResult;
 }
 
 export type ProcessingStep = 'extracting' | 'translating' | 'questions' | 'done';

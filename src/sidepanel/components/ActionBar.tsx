@@ -1,25 +1,30 @@
+type SaveStatus = 'idle' | 'saved' | 'duplicate';
+
 interface ActionBarProps {
   onExport: () => void;
   onSave: () => void;
-  saved?: boolean;
+  saveStatus?: SaveStatus;
 }
 
-export function ActionBar({ onExport, onSave, saved }: ActionBarProps) {
+export function ActionBar({ onExport, onSave, saveStatus = 'idle' }: ActionBarProps) {
+  const saved = saveStatus === 'saved';
+  const duplicate = saveStatus === 'duplicate';
+
   return (
-    <div className="sticky bottom-0 flex gap-3 border-t border-border bg-bg-card px-4 py-3">
-      <button
-        onClick={onExport}
-        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-bg-card py-2.5 text-sm font-semibold text-text-primary transition hover:bg-bg-panel"
-      >
-        📥 Export PDF
+    <div className="sticky bottom-0 flex gap-3 border-t border-border bg-bg-card px-4 py-3 shadow-action-bar">
+      <button onClick={onExport} className="btn-primary flex-1">
+        Export PDF
       </button>
       <button
         onClick={onSave}
-        className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white transition ${
-          saved ? 'bg-status-normal' : 'bg-accent-blue hover:bg-blue-700'
+        disabled={duplicate}
+        className={`flex-1 rounded-lg border text-sm font-semibold transition-all duration-150 ${
+          saved || duplicate
+            ? 'h-10 border-status-normal bg-status-normal-bg text-emerald-800'
+            : 'btn-secondary'
         }`}
       >
-        {saved ? '✓ Saved' : '💾 Save'}
+        {duplicate ? 'Already saved' : saved ? 'Saved' : 'Save'}
       </button>
     </div>
   );

@@ -64,14 +64,24 @@ export function formatDate(iso: string): string {
   });
 }
 
-export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-SG', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 }
 
+export function generateId(): string {
+  return crypto.randomUUID();
+}
+
+/** @deprecated Use extractReportTitle from history-utils */
 export function getReportTitle(result: AnalysisResult): string {
-  const flagged = result.values.filter((v) => v.status !== 'normal');
-  if (flagged.length > 0) {
-    return flagged[0].name.split('(')[0].trim() + ' Panel';
-  }
-  return 'Lab Report Analysis';
+  if (result.groups.length === 0) return 'Lab Report Analysis';
+  const names = result.groups.map((g) => g.system);
+  return names.join(' + ');
 }
