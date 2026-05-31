@@ -1,9 +1,19 @@
 import {
   BedrockRuntimeClient,
+  ConverseCommand,
   InvokeModelCommand,
 } from '@aws-sdk/client-bedrock-runtime';
 import type { AnalysisResult } from './types';
 import { normalizeAnalysisResult } from './normalize-analysis';
+
+function debugLog(message: string, data?: unknown) {
+  if (!__DEBUG_LOGS__) return;
+  if (data !== undefined) {
+    console.log(`[LabLens][Bedrock] ${message}`, data);
+    return;
+  }
+  console.log(`[LabLens][Bedrock] ${message}`);
+}
 
 const SYSTEM_PROMPT = `You are LabLens, a medical lab report translator. Your job is to take raw lab result text and convert it into plain English that a non-medical person can understand.
 
@@ -81,6 +91,18 @@ function parseJsonFromResponse(text: string): AnalysisResult {
   if (!jsonMatch) throw new Error('Invalid AI response format');
   const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
   return normalizeAnalysisResult(parsed);
+}
+
+function getProvider(): 'anthropic' | 'amazon' {
+  const provider = (__BEDROCK_PROVIDER__ || 'anthropic').toLowerCase();
+  return provider === 'amazon' ? 'amazon' : 'anthropic';
+}
+
+function getModelId(provider: 'anthropic' | 'amazon'): string {
+  const configured = __BEDROCK_MODEL_ID__?.trim();
+  if (configured) return configured;
+  if (provider === 'amazon') return 'amazon.nova-lite-v1:0';
+  return 'anthropic.claude-3-5-sonnet-20240620-v1:0';
 }
 
 export function getDemoAnalysisResult(): AnalysisResult {
@@ -254,20 +276,56 @@ export function getDemoAnalysisResult(): AnalysisResult {
 }
 
 export async function analyzeWithBedrock(extractedText: string): Promise<AnalysisResult> {
+  debugLog('analyzeWithBedrock called', { demoMode: __DEMO_MODE__, textLength: extractedText.length });
   if (__DEMO_MODE__) {
+    debugLog('DEMO_MODE=true, returning demo result');
     await new Promise((r) => setTimeout(r, 1500));
     return getDemoAnalysisResult();
   }
 
   const config = getAwsConfig();
   if (!config.credentials) {
+    debugLog('AWS credentials missing, returning demo result');
     await new Promise((r) => setTimeout(r, 800));
     return getDemoAnalysisResult();
   }
 
   const client = new BedrockRuntimeClient(config);
-  const modelId = 'anthropic.claude-3-5-sonnet-20240620-v1:0';
+  const provider = getProvider();
+  const modelId = getModelId(provider);
+  debugLog('Resolved provider/model', { provider, modelId, region: config.region });
 
+  if (provider === 'amazon') {
+    debugLog('Invoking Amazon model with ConverseCommand');
+    const response = await client.send(
+      new ConverseCommand({
+        modelId,
+        system: [{ text: SYSTEM_PROMPT }],
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                text: `Analyze this lab report text and respond with the JSON format specified:\n\n${extractedText}`,
+              },
+            ],
+          },
+        ],
+        inferenceConfig: {
+          maxTokens: 4096,
+          temperature: 0.2,
+        },
+      })
+    );
+
+    const content = (response.output?.message?.content ?? [])
+      .map((block) => ('text' in block ? block.text : ''))
+      .join('\n');
+    debugLog('Amazon response received', { outputLength: content.length });
+    return parseJsonFromResponse(content);
+  }
+
+  debugLog('Invoking Anthropic model with InvokeModelCommand');
   const body = JSON.stringify({
     anthropic_version: 'bedrock-2023-05-31',
     max_tokens: 4096,
@@ -291,5 +349,6 @@ export async function analyzeWithBedrock(extractedText: string): Promise<Analysi
 
   const responseBody = JSON.parse(new TextDecoder().decode(response.body));
   const content = responseBody.content?.[0]?.text ?? '';
+  debugLog('Anthropic response received', { outputLength: content.length });
   return parseJsonFromResponse(content);
 }

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "serve-sample": "python3 -m http.server 3456 --directory sample-data"
+    "serve-sample": "python3 -m http.server 3456 --directory sample-data",
+    "test:bedrock": "node scripts/test-bedrock.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.821.0",

@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
       __AWS_ACCESS_KEY_ID__: JSON.stringify(env.AWS_ACCESS_KEY_ID || ''),
       __AWS_SECRET_ACCESS_KEY__: JSON.stringify(env.AWS_SECRET_ACCESS_KEY || ''),
       __DEMO_MODE__: JSON.stringify(env.DEMO_MODE === 'true'),
+      __BEDROCK_PROVIDER__: JSON.stringify(env.BEDROCK_PROVIDER || 'anthropic'),
+      __BEDROCK_MODEL_ID__: JSON.stringify(env.BEDROCK_MODEL_ID || ''),
+      __DEBUG_LOGS__: JSON.stringify(env.DEBUG_LOGS === 'true'),
     },
     build: {
       rollupOptions: {

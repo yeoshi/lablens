@@ -4,7 +4,17 @@ import { looksLikeLabReport } from '../sidepanel/utils/helpers';
 import { extractSourceFilename } from '../sidepanel/utils/history-utils';
 import { extractTextWithTextract } from './textract';
 
+function debugLog(message: string, data?: unknown) {
+  if (!__DEBUG_LOGS__) return;
+  if (data !== undefined) {
+    console.log(`[LabLens][ServiceWorker] ${message}`, data);
+    return;
+  }
+  console.log(`[LabLens][ServiceWorker] ${message}`);
+}
+
 function sendProgress(state: ProcessingState) {
+  debugLog('Progress update', state);
   chrome.runtime.sendMessage({
     type: 'ANALYSIS_PROGRESS',
     payload: state,
@@ -16,6 +26,7 @@ async function runAnalysis(
   url: string,
   title: string
 ): Promise<AnalysisResult> {
+  debugLog('runAnalysis called', { url, title, textLength: extractedText.length });
   sendProgress({ step: 'extracting', progress: 40, message: 'Text extracted' });
 
   if (!extractedText.trim() || extractedText.length < 30) {
@@ -65,8 +76,10 @@ function isPdfTabUrl(url: string | undefined): boolean {
 
 async function tryContentScript(tabId: number): Promise<MessageType | null> {
   try {
+    debugLog('Trying content script extraction', { tabId });
     return await chrome.tabs.sendMessage(tabId, { type: 'EXTRACT_PDF' });
   } catch {
+    debugLog('Content script extraction failed');
     return null;
   }
 }
@@ -76,6 +89,7 @@ async function tryScriptingInjection(
   tab: chrome.tabs.Tab
 ): Promise<MessageType | null> {
   try {
+    debugLog('Trying scripting injection extraction', { tabId });
     const results = await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
       world: 'MAIN',
@@ -108,6 +122,7 @@ async function tryScriptingInjection(
       }
     }
   } catch {
+    debugLog('Scripting injection extraction failed');
     // Injection blocked on this page
   }
 
@@ -125,6 +140,7 @@ async function tryScriptingInjection(
 }
 
 async function fetchPdfFromTab(tab: chrome.tabs.Tab): Promise<MessageType | null> {
+  debugLog('Trying direct fetch extraction', { tabUrl: tab.url });
   const url = tab.url;
   if (!url || !isPdfTabUrl(url)) {
     return {
@@ -164,6 +180,7 @@ async function fetchPdfFromTab(tab: chrome.tabs.Tab): Promise<MessageType | null
 }
 
 async function extractPdfFromTab(tab: chrome.tabs.Tab): Promise<MessageType> {
+  debugLog('extractPdfFromTab called', { tabId: tab.id, tabUrl: tab.url, tabTitle: tab.title });
   if (!tab.id) {
     return { type: 'PDF_NOT_FOUND', payload: { message: 'No active tab found.' } };
   }
@@ -196,10 +213,12 @@ async function processPdfBytes(
   url: string,
   title: string
 ): Promise<void> {
+  debugLog('processPdfBytes called', { url, title, base64Length: base64.length });
   sendProgress({ step: 'extracting', progress: 20, message: 'Reading your lab report...' });
 
   const textractText = await extractTextWithTextract(base64);
   if (textractText) {
+    debugLog('Textract returned text; continuing analysis', { textLength: textractText.length });
     const result = await runAnalysis(textractText, url, title);
     chrome.runtime.sendMessage({
       type: 'ANALYSIS_COMPLETE',
@@ -209,6 +228,7 @@ async function processPdfBytes(
   }
 
   // pdf.js cannot run in service workers — delegate extraction to side panel
+  debugLog('Textract unavailable; delegating extraction to sidepanel');
   chrome.runtime.sendMessage({
     type: 'EXTRACT_PDF_IN_SIDEPANEL',
     payload: { base64, url, title },
@@ -220,6 +240,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((message: MessageType, _sender, sendResponse) => {
+  debugLog('Received runtime message', { type: message.type });
   if (message.type === 'ANALYZE_PDF') {
     (async () => {
       try {
@@ -250,6 +271,7 @@ chrome.runtime.onMessage.addListener((message: MessageType, _sender, sendRespons
           );
         }
       } catch (err) {
+        debugLog('ANALYZE_PDF failed', err);
         chrome.runtime.sendMessage({
           type: 'ANALYSIS_ERROR',
           payload: {
@@ -271,6 +293,7 @@ chrome.runtime.onMessage.addListener((message: MessageType, _sender, sendRespons
           payload: result,
         } satisfies MessageType);
       } catch (err) {
+        debugLog('ANALYZE_TEXT failed', err);
         chrome.runtime.sendMessage({
           type: 'ANALYSIS_ERROR',
           payload: {
